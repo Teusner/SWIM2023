@@ -1,0 +1,51 @@
+\documentclass[14pt, a4paper]{article}
+
+\usepackage{extsizes}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage[utf8]{inputenc}
+\pagenumbering{gobble}
+\clearpage
+
+% USER PACKAGES
+\usepackage{gensymb}
+\usepackage[backend=biber,style=ieee,doi=false,isbn=false,url=false,eprint=false]{biblatex}
+\addbibresource{bib/abstract.bib}
+
+\begin{document}
+
+	\begin{center}
+
+		{\Large\bf Torpedo-like AUV control}
+
+		\vspace*{0.8cm}
+
+		{\large Quentin \textsc{Brateau}$^{1}$, Fabrice \textsc{Le Bars}$^{1}$, Luc \textsc{Jaulin}$^{1}$}
+
+		\bigskip
+
+		{\small $^{1}$ENSTA Bretagne, UMR 6285, Lab-STICC, \\
+		2 rue François Verny, 29806 Brest CEDEX 09, \textsc{France} \\
+		\medskip
+		\texttt{quentin.brateau@ensta-bretagne.org}\\
+		\texttt{fabrice.lebars@ensta-bretagne.org}\\
+		\texttt{lucjaulin@gmail.com}\\
+		}
+
+	\end{center}
+
+	\bigskip
+
+	{\noindent\bf Keywords:} Underwater Vehicle, Mobile Robotics, Control, Navigation.
+
+	Autonomous Underwater Vehicles (AUV) have more flexibility in their movements than Remotely Operated Vehicles (ROV). This is mainly due to the fact that ROVs are tethered to the survey vessel. Therefore, it is not uncommon to find an AUV upside down or that dives steeply, while a ROV does not exhibit such strange behavior. Navigation of such a vehicle requires to measure and to estimate the orientation of the robot as well as to control it.
+
+	In this way, torpedo-like AUV are interesting to explore oceans. They are able to scan large areas by pointing their sensors in all directions only by controlling the orientation of the robot. The counterpart is to find simple and safe control laws able to control the orientation of the robot.
+	
+	In this talk, a control law for 3D moving robots will be introduced. This allows to control the orientation of the robot in space in the most efficient way. An application of this control law will be planned on a torpedo-like AUV as well as experimental manipulations.
+
+	\medskip
+
+\end{document}
