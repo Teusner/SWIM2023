@@ -33,6 +33,25 @@
          decorate with/.style=
 {decorate,decoration={shape backgrounds,shape=#1,shape size=1mm,shape sep=.5cm}}}
 
+% Plot style
+\pgfplotsset{
+    mplot/.style={
+        width=.48\textwidth,
+        height=.4\textheight,
+        grid=major,
+        grid style={dashed,gray!30},
+        ylabel style={align=center, font=\bfseries\boldmath},
+        xlabel style={align=center, font=\bfseries\boldmath},
+        x tick label style={font=\bfseries\boldmath},
+        y tick label style={font=\bfseries\boldmath},
+        scaled ticks=false,
+        label style={font=\footnotesize},
+        xticklabel style={font=\footnotesize},
+        yticklabel style={font=\footnotesize},
+        every axis plot/.append style={solid,thick},
+    },
+}
+
 % Progressbar
 \setbeamercolor{progress bar}{
     fg=TolLightGreen,
@@ -399,54 +418,57 @@
         \end{frame}
 
         \begin{frame}{Data}
+            \centering
             \begin{figure}
                 \centering
                 \begin{tikzpicture}
-                    \small
                     \begin{axis}[
-                            width=.48\textwidth,
-                            height=.4\textheight,
-                            grid=major,
-                            grid style={dashed,gray!30},
+                            mplot,
+                            name=depth,
                             xlabel=Time,
                             ylabel=Depth,
                             x unit=\si{\s},
                             y unit=\si{\m},
-                            name=depth
                         ]
-                        \addplot[solid,thick,RoyalBlue] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=depth, col sep=comma] {data/simulation.csv};
+                        \addplot[RoyalBlue] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=depth, col sep=comma] {data/simulation.csv};
                     \end{axis}
 
                     \begin{axis}[
+                            mplot,
+                            name=fins,
+                            at=(depth.right of north east), anchor=left of north west,
                             xshift=.25cm,
-                            width=.48\textwidth,
-                            height=.4\textheight,
-                            grid=major,
-                            grid style={dashed,gray!30},
                             xlabel=Time,
                             ylabel=Fin angle,
                             x unit=\si{\s},
                             y unit=\si{\radian},
-                            name=fins,
-                            at=(depth.right of north east), anchor=left of north west
                         ]
-                        \addplot[solid,thick,ForestGreen] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=p_fin, col sep=comma] {data/simulation.csv};
-                        \addplot[solid,thick,RubineRed] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=s_fin, col sep=comma] {data/simulation.csv};
+                        \addplot[Dandelion] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=p_fin, col sep=comma] {data/simulation.csv};
+                        \addplot[RubineRed] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=s_fin, col sep=comma] {data/simulation.csv};
                     \end{axis}
 
                     \begin{axis}[
-                            width=.48\textwidth,
-                            height=.4\textheight,
-                            grid=major,
-                            grid style={dashed,gray!30},
+                            mplot,
+                            name=pressure,
+                            at=(depth.below south west), anchor=above north west,
                             xlabel=Time,
                             ylabel=Pressure,
                             x unit=\si{\s},
                             y unit=\si{\pascal},
-                            name=pressure,
-                            at=(depth.below south west), anchor=above north west
                         ]
-                        \addplot[solid,thick,RoyalPurple] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=pressure, col sep=comma] {data/simulation.csv};
+                        \addplot[RoyalPurple] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=pressure, col sep=comma] {data/simulation.csv};
+                    \end{axis}
+
+                    \begin{axis}[
+                            mplot,
+                            name=pitch,
+                            at=(fins.below south west), anchor=above north west,
+                            xlabel=Time,
+                            ylabel=Pitch,
+                            x unit=\si{\s},
+                            y unit=\si{\radian},
+                        ]
+                        \addplot[ForestGreen] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=/riptide_1/imu_broadcaster/imu_status/orientation/pitch_deg, col sep=comma] {data/simulation.csv};
                     \end{axis}
                 \end{tikzpicture}
                 \caption{Mission simulation}
