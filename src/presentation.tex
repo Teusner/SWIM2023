@@ -298,13 +298,58 @@
                     \end{equation}
                 \end{block}
                 \begin{block}<3->{Angular velocity w}
-                    Link between $\mathbf{\color{RoyalPurple}w}$ and $\mathbf{\color{RoyalPurple}R_w}$.
+                    Link between $\mathbf{\color{RoyalPurple}w}$ and $\mathbf{\color{RoyalPurple}R_w}$~\cite{jaulin2019mobile}.
                     \begin{align}
                         \onslide<4->{\mathbf{\color{RoyalPurple}R_w}^{\color{RubineRed}t} &= Exp~\mathbf{\color{RoyalPurple}w} \\}
                         \onslide<5->{\mathbf{\color{RoyalPurple}w} &= {\color{RubineRed}t} \cdot Log~\mathbf{\color{RoyalPurple}R_w} \\}
                         \notag
                     \end{align}
                     \vskip-1.5em
+                \end{block}
+            \end{minipage}
+        \end{frame}
+
+
+        \begin{frame}{Other dimensions extension}
+            \centering
+            \begin{minipage}{.45\textwidth}
+                \begin{figure}
+                    \centering
+                    \begin{tikzpicture}
+                        \begin{axis}[
+                                mplot,
+                                width=\textwidth,
+                                height=.5\textheight,
+                                name=sawtooth,
+                                xlabel=$\theta$,
+                                ylabel=$Log(A(\theta))$,
+                                xmin=-10, xmax=10, % x scale
+                                ymin=-4, ymax=4, % y scale
+                                domain=-9:9, samples=100,
+                            ]
+                            \addplot[RoyalBlue] {2.*3.1415/180.*atan(tan(x*90/3.1415))};
+                        \end{axis}
+                    \end{tikzpicture}
+                    \caption{$Log$ in $SO(2)$}
+                \end{figure}
+            \end{minipage}
+            \hfill
+            \begin{minipage}{.5\textwidth}
+                \begin{block}{2D Extension}
+                    \vspace{.25cm}
+                    \begin{itemize}
+                        \item $Log$ of a rotation matrix
+                        \item Find sawtooth
+                    \end{itemize}
+                    \begin{equation}
+                        sawtooth(x) = 2 \cdot atan\left(tan\left(\frac{x}{2}\right)\right)
+                    \end{equation}
+                \end{block}
+                \begin{block}<2->{ND Extension}
+                    \begin{itemize}
+                        \item General formula for atitude control
+                        \item ND extension possible
+                    \end{itemize}
                 \end{block}
             \end{minipage}
         \end{frame}
@@ -497,6 +542,8 @@
                 \end{block}
             \end{minipage}
         \end{frame}
+
+        
 
     \appendix
 
