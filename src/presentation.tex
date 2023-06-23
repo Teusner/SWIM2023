@@ -13,6 +13,8 @@
 \usepackage{siunitx}
 \usepackage{colortbl}
 \usepackage{arydshln}
+\usepackage{pgf}
+\usepackage{adjustbox}
 
 \usepackage[style=authoryear,backend=biber]{biblatex}
 \renewcommand*{\nameyeardelim}{\addcomma\addspace}
@@ -25,13 +27,43 @@
 \usepackage{pgfplots}
 \usepackage{pgfplotsthemetol}
 \usepackage{tikz}
-\usetikzlibrary{automata,positioning,arrows,decorations.pathmorphing,calc,patterns,decorations.markings,decorations.shapes,shapes.geometric,matrix}
+\usetikzlibrary{automata,positioning,arrows,decorations.pathmorphing,calc,patterns,decorations.markings,decorations.shapes,shapes.geometric,matrix,arrows.meta,decorations.pathreplacing,overlay-beamer-styles,karnaugh,overlay-beamer-styles,fit,backgrounds}
 \usepgfplotslibrary{groupplots,units}
 \pgfplotsset{width=7cm,compat=1.18}
 
 \tikzset{paint/.style={ draw=#1, fill=#1 },
          decorate with/.style=
 {decorate,decoration={shape backgrounds,shape=#1,shape size=1mm,shape sep=.5cm}}}
+
+\newcommand{\mysetminusD}{\hbox{\tikz{\draw[line width=0.6pt,line cap=round] (3pt,0) -- (0,6pt);}}}
+\newcommand{\mysetminusT}{\mysetminusD}
+\newcommand{\mysetminusS}{\hbox{\tikz{\draw[line width=0.45pt,line cap=round] (2pt,0) -- (0,4pt);}}}
+\newcommand{\mysetminusSS}{\hbox{\tikz{\draw[line width=0.4pt,line cap=round] (1.5pt,0) -- (0,3pt);}}}
+
+\newcommand{\mysetminus}{\mathbin{\mathchoice{\mysetminusD}{\mysetminusT}{\mysetminusS}{\mysetminusSS}}}
+
+%command for alg-closure that automatically adapts its 'bar' to the arg based on the args length (including '\')
+\newcommand{\ols}[1]{\mskip.5\thinmuskip\overline{\mskip-.5\thinmuskip {#1} \mskip-.5\thinmuskip}\mskip.5\thinmuskip} % overline short
+\newcommand{\olsi}[1]{\,\overline{\!{#1}}} % overline short italic
+\makeatletter
+\newcommand\closure[1]{
+  \tctestifnum{\count@stringtoks{#1}>1} %checks if number of chars in arg > 1 (including '\')
+  {\ols{#1}} %if arg is longer than just one char, e.g. \mathbb{Q}, \mathbb{F},...
+  {\olsi{#1}} %if arg is just one char, e.g. K, L,...
+}
+% FROM TOKCYCLE:
+\long\def\count@stringtoks#1{\tc@earg\count@toks{\string#1}}
+\long\def\count@toks#1{\the\numexpr-1\count@@toks#1.\tc@endcnt}
+\long\def\count@@toks#1#2\tc@endcnt{+1\tc@ifempty{#2}{\relax}{\count@@toks#2\tc@endcnt}}
+\def\tc@ifempty#1{\tc@testxifx{\expandafter\relax\detokenize{#1}\relax}}
+\long\def\tc@earg#1#2{\expandafter#1\expandafter{#2}}
+\long\def\tctestifnum#1{\tctestifcon{\ifnum#1\relax}}
+\long\def\tctestifcon#1{#1\expandafter\tc@exfirst\else\expandafter\tc@exsecond\fi}
+\long\def\tc@testxifx{\tc@earg\tctestifx}
+\long\def\tctestifx#1{\tctestifcon{\ifx#1}}
+\long\def\tc@exfirst#1#2{#1}
+\long\def\tc@exsecond#1#2{#2}
+\makeatother
 
 % Plot style
 \pgfplotsset{
@@ -84,7 +116,7 @@
 \makeatother
 
 % Title
-\title{Torpedo-like AUV control}
+\title{Union of adjacent contractors}
 \date{\today}
 \author{Quentin Brateau}
 \institute{ENSTA Bretagne}
@@ -112,13 +144,13 @@
 
     \section{Context}
 
-        \begin{frame}{Introduction}{PhD}
+        \begin{frame}{PhD thesis}
             \centering
             \begin{minipage}[c]{0.58\textwidth}
                 \begin{block}{Research laboratory}
                     \vspace{0.2cm}
                     \begin{itemize}
-                        \item ENSTA Bretagne, UMR 6285, Lab-STICC
+                        \item ENSTA Bretagne, UMR 6285, Lab-STICC, IAO, ROBEX
                     \end{itemize}
                 \end{block}
 
@@ -141,7 +173,7 @@
             \end{minipage}
         \end{frame}
 
-        \begin{frame}{Introduction}
+        \begin{frame}{Goal}
             \begin{minipage}[c]{0.55\textwidth}
                 \begin{block}{AUV}
                     \vspace{0.25cm}
@@ -176,615 +208,658 @@
             \end{minipage}
         \end{frame}
 
-    \section{Motivation}
-
-        \begin{frame}{Orientation control}
-            \centering
-            \begin{minipage}[c]{0.6\textwidth}
-                \begin{block}{Log control}
-                    \begin{itemize}
-                        \vspace{0.25cm}
-                        \item Introduce \textbf{Log control}
-                        \item Simple control law \\
-                        \item Control AUV orientation \\
-                        \item Fastest reorientation
+        \begin{frame}{Robot sensors}
+            \begin{minipage}[t]{.55\textwidth}
+                \begin{exampleblock}{Riptide's sensors}
+                    \vspace{0.25cm}
+                    \begin{itemize}[<+->]
+                        \item Proprioceptive
+                        \begin{itemize}
+                            \item IMU
+                        \end{itemize}
+                        \item Exteroceptive
+                        \begin{itemize}
+                            \item Pressure sensor \\ 
+                            \item Echosounder
+                        \end{itemize}
                     \end{itemize}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Log control}
-            \centering
-            \begin{minipage}{0.45\textwidth}
-                \centering
-                \begin{figure}
-                    \begin{tikzpicture}[
-                        wavy/.style={->,>=latex,thick,decorate,
-                        decoration={snake,amplitude=2mm,segment length=8mm,pre length=1mm, post length=1mm}}
-                        ]
-                        \shade[ball color = gray!40, opacity = 0.4] (0,0) circle (2cm);
-                        \draw[thick] (0,0) circle (2cm);
-                        \onslide<1->{
-                            \begin{scope}
-                                \draw[thick] (-2,0) arc (180:360:2 and 0.6) coordinate[pos=0.3] (R3);
-                                \draw[dashed] (2,0) arc (0:180:2 and 0.6);
-                            \end{scope}
-                        }
-                        \onslide<2->{
-                            \coordinate (R1) at (0.8,1.3);
-                            \draw[thick,red,->,>=latex] (0,0) -- node[midway,above left] {$\mathbf{u}$} (R1); 
-                        }
-                        \onslide<3->{
-                            \draw[thick,RoyalBlue,->,>=latex] (0,0) -- node[midway,above] {$\mathbf{v}$} (R3);
-                        }
-                        \coordinate (R4) at (-0.8,1.3);
-                        \onslide<4>{
-                            \draw[wavy,ForestGreen] (R1) to[bend right=45] (R3);
-                            \node[ForestGreen] at (R4) {$\mathbf{w}$};
-                        }
-                        \onslide<5->{
-                            \path[thick,->,>=latex,RoyalPurple] (R1) edge[in=90,out=130] (R3);
-                            \node[RoyalPurple] at (R4) {$\mathbf{w}$};
-                        }
-                    \end{tikzpicture}
-                    \caption{Representation in $S^2$}
-                \end{figure}
+                \end{exampleblock}
+                % \begin{alertblock}<+->{Echosounder measurements}
+                %     \begin{itemize}[<+->]
+                %         \item Sound propagation in pool causes multiple reflections
+                %         \item Use information provided by the silence
+                %     \end{itemize}
+                % \end{alertblock}
             \end{minipage}
             \hfill
-            \begin{minipage}{0.45\textwidth}
+            \begin{minipage}[t]{.42\textwidth}
+                \begin{figure}[htb]
+                    \includegraphics[width=\textwidth]{imgs/echosounder.jpg}
+                    \caption{Riptide's echosounder located below the head}
+                \end{figure}
+            \end{minipage}
+        \end{frame}
+
+        \begin{frame}{Localization}
+            \begin{minipage}[t]{.45\textwidth}
+                \vspace{-4mm}
                 \centering
                 \begin{figure}
-                    \begin{tikzpicture}[
-                        wavy/.style={->,>=latex,thick,decorate,
-                        decoration={snake,amplitude=2mm,segment length=8mm,pre length=1mm, post length=1mm}}
-                        ]
-                        \shade[ball color = gray!40, opacity = 0.4] (0,0) circle (2cm);
-                        \draw[thick] (0,0) circle (2cm);
-                        \onslide<1->{
-                            \begin{scope}
-                                \draw[thick] (-2,0) arc (180:360:2 and 0.6) coordinate[pos=0.3] (R3);
-                                \draw[dashed] (2,0) arc (0:180:2 and 0.6);
-                            \end{scope}
-                        }
-                        \onslide<3->{
-                            \node[thick,RoyalBlue] at (R3) {$\bullet$} node[RoyalBlue] at (R3) [below] {$\mathbf{R_v}$};
-                        }
-                        \coordinate (R4) at (-0.8,1.3);
-                        \onslide<4>{
-                            \draw[wavy,ForestGreen,densely dotted] (R1) to[bend right=45] (R3);
-                            \node[ForestGreen] at (R4) {$\mathbf{R_w}$};
-                        }
-                        \onslide<5->{
-                            \path[thick,->,>=latex,RoyalPurple,densely dotted] (R1) edge[in=90,out=130] (R3);
-                            \node[RoyalPurple] at (R4) {$\mathbf{R_w}$};
-                        }
-                        \onslide<2->{
-                            \coordinate (R1) at (0.8,1.3);
-                            \node[red] at (R1) {$\bullet$} node[red] at (R1) [below right] {$\mathbf{R_u}$};
-                        }
-                    \end{tikzpicture}
-                    \caption{Representation in $SO(3)$}
-                \end{figure}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Log control}
-            \centering
-            \begin{minipage}{0.45\textwidth}
+                    \begin{overprint}
+                        \onslide<1>\centerline{\input{imgs/robot_unknown.pgf}}
+                        \onslide<2>\centerline{\input{imgs/robot_pool.pgf}}
+                        \onslide<3->\centerline{\input{imgs/robot_echosounder.pgf}}
+                    \end{overprint}
+                    \caption{\only<1>{Unknown localization}\only<2>{Robot is in the pool}\only<3->{Distance measurement}}
+               \end{figure}
+            \end{minipage}%
+            \hfill
+            \begin{minipage}[t]{.55\textwidth}
                 \centering
-                \begin{figure}
-                    \begin{tikzpicture}
-                        \shade[ball color = gray!40, opacity = 0.4] (0,0) circle (2cm);
-                        \draw[thick] (0,0) circle (2cm);
-                        \begin{scope}
-                            \draw[thick] (-2,0) arc (180:360:2 and 0.6) coordinate[pos=0.3] (R3);
-                            \draw[dashed] (2,0) arc (0:180:2 and 0.6);
-                        \end{scope}
-                        \coordinate (R1) at (0.8,1.3);
-                        \coordinate (R4) at (-0.8,1.3);
-                        \node[thick,RoyalBlue] at (R3) {$\bullet$} node[RoyalBlue] at (R3) [below] {$\mathbf{R_v}$};
-                        \path[thick,->,>=latex,RoyalPurple,densely dotted] (R1) edge[in=90,out=130] (R3);
-                        \node[RoyalPurple] at (R4) {$\mathbf{R_w}$};
-                        \node[red] at (R1) {$\bullet$} node[red] at (R1) [below right] {$\mathbf{R_u}$};
-                    \end{tikzpicture}
-                    \caption{Representation in $SO(3)$}
-                \end{figure}
-            \end{minipage}
-            \hfill
-            \begin{minipage}{0.5\textwidth}
-                \begin{block}<2->{Rotation matrix}
-                    \begin{equation}
-                        \mathbf{\color{RoyalPurple}R_w} = \mathbf{\color{red}R_u}^T \cdot \mathbf{\color{ForestGreen}R_v}
-                    \end{equation}
-                \end{block}
-                \begin{block}<3->{Angular velocity w}
-                    Link between $\mathbf{\color{RoyalPurple}w}$ and $\mathbf{\color{RoyalPurple}R_w}$~\cite{jaulin2019mobile}.
-                    \begin{align}
-                        \onslide<4->{\mathbf{\color{RoyalPurple}R_w}^{\color{RubineRed}t} &= Exp~\mathbf{\color{RoyalPurple}w} \\}
-                        \onslide<5->{\mathbf{\color{RoyalPurple}w} &= {\color{RubineRed}t} \cdot Log~\mathbf{\color{RoyalPurple}R_w} \\}
-                        \notag
-                    \end{align}
-                    \vskip-1.5em
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-
-        \begin{frame}{Other dimensions extension}
-            \centering
-            \begin{minipage}{.45\textwidth}
-                \begin{figure}
-                    \centering
-                    \begin{tikzpicture}
-                        \begin{axis}[
-                                mplot,
-                                width=\textwidth,
-                                height=.5\textheight,
-                                name=sawtooth,
-                                xlabel=$\theta$,
-                                ylabel=$Log(A(\theta))$,
-                                xmin=-10, xmax=10, % x scale
-                                ymin=-4, ymax=4, % y scale
-                                domain=-9:9, samples=100,
-                            ]
-                            \addplot[RoyalBlue] {2.*3.1415/180.*atan(tan(x*90/3.1415))};
-                        \end{axis}
-                    \end{tikzpicture}
-                    \caption{$Log$ in $SO(2)$}
-                \end{figure}
-            \end{minipage}
-            \hfill
-            \begin{minipage}{.5\textwidth}
-                \begin{block}{2D Extension}
-                    \vspace{.25cm}
-                    \begin{itemize}
-                        \item $Log$ of a rotation matrix
-                        \item Find sawtooth
-                    \end{itemize}
-                    \begin{equation}
-                        sawtooth(x) = 2 \cdot atan\left(tan\left(\frac{x}{2}\right)\right)
-                    \end{equation}
-                \end{block}
-                \begin{block}<2->{ND Extension}
-                    \begin{itemize}
-                        \item General formula for atitude control
-                        \item ND extension possible
-                    \end{itemize}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-    \section{Implementation}
-
-        \begin{frame}{Controller block diagram}
-            \centering
-            \begin{figure}
-                \begin{tikzpicture}[
-                    input/.style={->,>=latex,thick,decorate,
-                    decoration={snake,amplitude=.4mm,segment length=2mm,post length=2mm}},
-                    block/.style={draw,font=\small,thick,
-                        minimum width={2cm},minimum height={1.5cm}}]
-
-                    \onslide<1-> \node[block,rectangle,align=center] (n3) {AUV\footnote{\textcite{fossen2011handbook}}};
-
-                    \onslide<2->{
-                        \node[block,circle,left=of n3] (n2) {Controller};
-                        \coordinate (twist) at (n2.west);
-                        \foreach \i/\a/\s in {0/37.5/-2.4,1/12.5/-3,2/-12.5/-3,3/-37.5/-2.5} {
-                            \draw[thick,->,>=latex,Dandelion] (n2.\a) to node[near end,xshift=\s*1mm,yshift=1.5mm] {$u_\i$} ([yshift=0.6cm -\i * 0.4 cm]n3.west);
+                \onslide<4->{
+                    \begin{figure}
+                        \resizebox*{.75\textwidth}{!}{
+                            \input{imgs/robot_zoom.pgf}
                         }
-                    }
-
-                    \onslide<3->{
-                        \node[block,circle,left=of n2] (n1) {Log \linebreak controller};
-                        \draw[thick,->,>=latex,RoyalBlue] (n1) to node[midway,above] {$\mathbf{v}$} node[midway,below] {$\mathbf{w}$} (twist);
-                    }
-
-                    % Inputs
-                    \onslide<4-6>{
-                        \coordinate[above=of n1.100] (u);
-                        \draw[input,red] (u) -- node[midway,left,red] {$\mathbf{R_u}$} (n1.100);
-                    }
-                    \onslide<5-6>{
-                        \coordinate[above=of n1.80] (v);
-                        \draw[input,ForestGreen] (v) -- node[midway,right,ForestGreen] {$\mathbf{R_v}$} (n1.80);
-                    }
-                    \onslide<6->{
-                        \coordinate(t) at ([shift=({145:2 cm})]n1);
-                        \draw[input,RubineRed] (t) -- node[midway,below left,RubineRed] {$\mathbf{t}$} (n1.145);
-                    }
-
-                    \onslide<7->{
-                        \node[yshift=-0.8cm,red] (Ru) at (n2.south) {$\mathbf{R_u}$};
-                        \draw[thick,red,->,>=latex] (n3.south) |- ($(Ru)+(0,0.3)$) -| (n1.south);
-                        \coordinate[above=of n1.90] (v);
-                        \draw[input,ForestGreen] (v) -- node[midway,right,ForestGreen] {$\mathbf{R_v}$} (n1.90);
-                    }
-                \end{tikzpicture}
-                \caption{
-                    \only<1-6>{Open-loop}\only<7->{Closed-loop} block diagram - Log controller
+                        \caption{Uncertain area}
+                    \end{figure}
                 }
+                \vspace{-5mm}
+                \begin{alertblock}<5->{Problem statement}
+                    Why is there this uncertain area?
+                \end{alertblock}
+            \end{minipage}
+        \end{frame}
+
+    \section{Geometric contractors}
+
+    \begin{frame}{Geometric contractors}
+        \begin{minipage}[c]{.45\textwidth}
+            \begin{block}<+->{Geometric contractors}
+                \vspace{2.5mm}
+                \begin{itemize}[<+->]
+                    \item Contractors based on geometrical constraints
+                    \item Usefull in localization
+                \end{itemize}
+            \end{block}
+            \begin{exampleblock}<+->{Example}
+                \begin{itemize}[<+->]
+                    \item CtcCross
+                    \item CtcVisible
+                \end{itemize}
+            \end{exampleblock}
+            \begin{block}<+->{Polygon extension}
+                \begin{itemize}[<+->]
+                    \item Contractors on segments
+                    \item Extension on polygons
+                \end{itemize}
+            \end{block}
+        \end{minipage}%
+        \hfill
+        \begin{minipage}[c]{.5\textwidth}
+            \begin{figure}
+                \begin{overprint}
+                    \onslide<5>\centerline{\input{imgs/sepcross_segment.pgf}}
+                    \onslide<6->\centerline{\input{imgs/sepvisible_segment.pgf}}
+                \end{overprint}
+                \vspace{-8mm}
+                \begin{overprint}
+                    \onslide<5>\caption{SepCross}
+                    \onslide<6->\caption{SepVisible}
+                \end{overprint}
             \end{figure}
-        \end{frame}
+        \end{minipage}
+    \end{frame}
 
-    \section{Mission}
-
-        \begin{frame}{Mission description}
-            \sisetup{input-digits = 0123456789\infty}
-            \centering
-            \begin{minipage}[c]{0.4\textwidth}
-                \centering
-                \begin{table}
-                    \begin{tabular}[t]{ccc}
-                        \toprule
-                        State & Depth & Duration \\
-                        \midrule
-                        $q_0$ & $\qty{0}{\m}$ & $\qty{\infty}{\s}$ \\
-                        % \AC{red} \hdashline[.6pt/1.2pt] \EAC
-                        $q_1$ & $\qty{3}{\m}$ & $\qty{10}{\s}$ \\
-                        $q_2$ & $\qty{1}{\m}$ & $\qty{10}{\s}$ \\
-                        $q_3$ & $\qty{3}{\m}$ & $\qty{10}{\s}$ \\
-                        \bottomrule
-                    \end{tabular}
-                    \caption{States description}
-                \end{table}
-            \end{minipage}
-            \hfill
-            \begin{minipage}[c]{0.55\textwidth}
-                \begin{figure}[\textwidth]
-                    \centering
-                    \begin{tikzpicture}[node distance=2cm,on grid,auto]
-                        \node[state, initial, accepting] (q0) {$q_0$};
-                        \node[state, above right of=q0] (q1) {$q_1$};
-                        \node[state, below right of=q0] (q3) {$q_3$};
-                        \node[state, below right of=q1] (q2) {$q_2$};
-                        
-                        \draw[->,>=latex]
-                            (q0) edge node[midway, above left] {\color{RubineRed}{trigger}} (q1)
-                            (q1) edge node[midway, above right] {$d=\qty{10}{\s}$} (q2)
-                            (q2) edge node[midway, below right] {$d=\qty{10}{\s}$} (q3)
-                            (q3) edge node[midway, below left] {$d=\qty{10}{\s}$} (q0);
-                    \end{tikzpicture}
-                    \caption{FSM of the mission}
-                \end{figure}
-            \end{minipage}
-        \end{frame}
-
-    \section{Simulation}
-
-        \begin{frame}{Simulation}
-            \centering
-            \begin{minipage}[c]{0.95\textwidth}
-                \begin{figure}
-                    \href{run:simulation.mkv?autostart&loop}{\includegraphics[width=\textwidth]{build/imgs/videos/simulation}}
-                    \caption{Mission simulation}
-                \end{figure}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Data}
-            \centering
+    \begin{frame}[fragile]{Union problem}
+        \begin{minipage}[t]{.5\textwidth}
             \begin{figure}
                 \centering
-                \begin{tikzpicture}
-                    \begin{axis}[
-                            mplot,
-                            name=depth,
-                            xlabel=Time,
-                            ylabel=Depth,
-                            x unit=\si{\s},
-                            y unit=\si{\m},
+                \adjustbox{max width=\textwidth}{
+                    \begin{tikzpicture}
+                        [   
+                            ArrowLine/.style n args={4}{
+                                line width=.75pt, #1,
+                                postaction={
+                                    decorate, decoration={
+                                        markings, mark=at position #4 with {
+                                            \arrow[line width=.75pt, #1] {Latex};
+                                            \node[#3] {#2};
+                                        }
+                                    }
+                                }
+                            }
                         ]
-                        \addplot[RoyalBlue] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=depth, col sep=comma] {data/simulation.csv};
-                    \end{axis}
 
-                    \begin{axis}[
-                            mplot,
-                            name=fins,
-                            at=(depth.right of north east), anchor=left of north west,
-                            xshift=.25cm,
-                            xlabel=Time,
-                            ylabel=Fin angle,
-                            x unit=\si{\s},
-                            y unit=\si{\radian},
-                        ]
-                        \addplot[Dandelion] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=p_fin, col sep=comma] {data/simulation.csv};
-                        \addplot[RubineRed] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=s_fin, col sep=comma] {data/simulation.csv};
-                    \end{axis}
+                        % Specify the bounding box
+                        \useasboundingbox (-.5,-.5) rectangle (3.6,3.6);
 
-                    \begin{axis}[
-                            mplot,
-                            name=pressure,
-                            at=(depth.below south west), anchor=above north west,
-                            xlabel=Time,
-                            ylabel=Pressure,
-                            x unit=\si{\s},
-                            y unit=\si{\pascal},
-                        ]
-                        \addplot[RoyalPurple] table [x expr={\fpeval{\thisrow{pressure_stamp} - 1681203552.}}, y=pressure, col sep=comma] {data/simulation.csv};
-                    \end{axis}
+                        % Define nodes
+                        \coordinate (n0) at (0,0);
+                        \coordinate (n1) at (0,1.8);
+                        \coordinate (n2) at (1,1);
+                        \coordinate (n3) at (2.2,0.8);
 
-                    \begin{axis}[
-                            mplot,
-                            name=pitch,
-                            at=(fins.below south west), anchor=above north west,
-                            xlabel=Time,
-                            ylabel=Pitch,
-                            x unit=\si{\s},
-                            y unit=\si{\radian},
-                        ]
-                        \addplot[ForestGreen] table [x expr={\fpeval{\thisrow{time} - 1681203552.}}, y=/riptide_1/imu_broadcaster/imu_status/orientation/pitch_deg, col sep=comma] {data/simulation.csv};
-                    \end{axis}
-                \end{tikzpicture}
-                \caption{Mission simulation}
+                        % Set overshoot length
+                        \def\prevovershoot{0.5}
+                        \def\nextovershoot{1.5}
+
+                        % Iterate over nodes
+                        \foreach \i in {1,2,3} {
+                            % Do something with each node
+                            \pgfmathanglebetweenpoints{\pgfpointanchor{n0}{center}}{\pgfpointanchor{n\i}{center}}
+                            \let\angle\pgfmathresult
+                            \coordinate (prev0\i) at ($(n0) + (\angle+180:\prevovershoot)$);
+                            \coordinate (next0\i) at ($(n\i) + (\angle:\nextovershoot)$);
+                        }
+                            
+                        % Iterate over nodes
+                        \foreach \i in {1,3} {
+                            % Do something with each node 
+                            \pgfmathanglebetweenpoints{\pgfpointanchor{n2}{center}}{\pgfpointanchor{n\i}{center}}
+                            \let\angle\pgfmathresult
+                            \coordinate (prev2\i) at ($(n2) + (\angle+180:\prevovershoot)$);
+                            \coordinate (next2\i) at ($(n\i) + (\angle:\prevovershoot)$);
+                        }
+
+                        % Draw obstacles
+                        \draw<+->[line width=1.5pt] (n1) -- node[midway, above] {$e_1$} (n2) -- node[midway, above] {$e_2$} (n3);
+                        
+                        % First visibility set
+                        \draw<+-5>[densely dotted, gray, line width=.75pt] (prev01) -- (next01);
+                        \draw<.-5>[densely dotted, gray, line width=.75pt] (prev21) -- (next21);
+                        \draw<.-5>[densely dotted, gray, line width=.75pt] (prev02) -- (next02);
+
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$a$}{above left}{.62}] (next01) -- (n1);
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$b$}{below left}{.62}] (n1) -- (n2);
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$c$}{xshift=-5mm}{.45}] (n2) -- (next02);
+
+                        \filldraw<+->[RoyalBlue,opacity=.3] (n1) -- (n2) -- (next02) -- (next02) to[out=180,in=15] (next01) -- cycle;
+                        \node<.->[RoyalBlue,xshift=3mm,yshift=-3mm] at (next01) {$A_1$};
+                        
+                        % Second visibility set
+                        \draw<+-10>[densely dotted, gray, line width=.75pt] (prev02) -- (next02);
+                        \draw<.-10>[densely dotted, gray, line width=.75pt] (prev23) -- (next23);
+                        \draw<.-10>[densely dotted, gray, line width=.75pt] (prev03) -- (next03);
+
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$d$}{above left}{.45}] (next02) -- (n2);
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$e$}{below left}{.62}] (n2) -- (n3);
+                        \draw<+->[ArrowLine={line width=.75pt,RoyalBlue}{$f$}{above left}{.62}] (n3) -- (next03);
+
+                        % Increment the overlay counter manually
+                        \filldraw<+->[RoyalBlue,opacity=.3] (n2) -- (n3) -- (next03) to[out=190,in=15] (next02) -- cycle;
+                        \node<.->[RoyalBlue,xshift=1mm,yshift=-3mm] at (next02) {$A_2$};
+
+                        % Draw nodes
+                        \fill[RubineRed,draw=black] (n0) circle (2pt) node[xshift=3mm] {$p$};
+                        \fill[white,draw=black,line width=1pt] (n1) circle (1.5pt);
+                        \fill[white,draw=black,line width=1pt] (n2) circle (1.5pt);
+                        \fill[white,draw=black,line width=1pt] (n3) circle (1.5pt);
+                    \end{tikzpicture}
+                }
+                \caption{Sepvisible on a polygon}
             \end{figure}
-        \end{frame}
-
-    \section{Conclusion}
-
-        \begin{frame}{Conclusion}
-            \centering
-            \begin{minipage}{0.8\textwidth}
-                \begin{block}{Log control}
-                    \vspace*{.25cm}
+        \end{minipage}%
+        \hfill
+        \begin{minipage}[t]{.5\textwidth}
+            \begin{overprint}
+                \only<10-20>{
+                    \begin{block}<+->{Masked area}
+                        \vspace{2.5mm}
+                        $$A = A_1 \cup A_2$$
+                    \end{block}
+                    \begin{block}<+->{Boundary aproach}
+                        \vspace{2.5mm}
+                        \begin{itemize}[<+->]
+                            \item $\partial A_1 = a + b + c$
+                            \item $\partial A_2 = d + e + f$
+                            \item
+                            \begin{overprint}
+                                \only<.>{$\partial A \neq \partial A_1 + \partial A_2$}
+                                \only<+>{$\partial A = a + b + c + d + e + f$}
+                                \only<+>{$\partial A = a + b + {\color{RubineRed}c} + {\color{RubineRed}d} + e + f$}
+                                \only<+>{$\partial A = a + b + {\color{RubineRed}c} + {\color{RubineRed}(-c)} + e + f$}
+                                \only<+->{$\partial A = a + b + e + f$}
+                            \end{overprint}
+                        \end{itemize}
+                        \vspace{-5mm}
+                    \end{block}
+                }
+                \only<21->{
+                    \begin{figure}
+                        \resizebox*{.8\textwidth}{!}{
+                            \input{imgs/sepvisible_polygon.pgf}
+                        }
+                        \caption{SepVisible on a polygon}
+                    \end{figure}
+                    \vspace{-2cm}
+                    
+                }
+            \end{overprint}
+        \end{minipage}
+        \begin{center}
+            \begin{minipage}[c]{.5\textwidth}
+                \vspace{-5mm}
+                \begin{alertblock}<22->{Solution}
+                    \vspace{2.5mm}
                     \begin{itemize}
-                        \item Simple and elegant control law
-                        \item Fastest reorientation along a geodesic in $SO(3)$
-                        \item Applicable in orientation control of various robots 
-                        \item Need a complete knowledge of $\mathbf{R}$
+                        \item<23-> $\mathcal{C}_{A\cup B} \neq \mathcal{C}_{A} \cup \mathcal{C}_{B}$
+                        \item<24-> $c + d = \mathbb{R}^2$
+                    \end{itemize}
+                \end{alertblock}
+            \end{minipage}
+        \end{center}
+    \end{frame}
+
+    \section{Union of contractors}
+
+        \begin{frame}{Frame of the problem}
+            \begin{minipage}[c]{.56\textwidth}
+                \begin{block}{Set definition}
+                    \vspace{2.5mm}
+                    \begin{itemize}[<+->]
+                        \item $A: \left\{x_1 + 3 \cdot x_2 \in [-\infty; 0]\right\}$
+                        \item $B: \left\{(x_1+0.5)^2 + x_2^2 - 2^2\in [-\infty; 0]\right\}$
+                        \item $C: \left\{(x_1-0.5)^2 + x_2^2 - 2^2\in [-\infty; 0]\right\}$
                     \end{itemize}
                 \end{block}
-                \begin{block}{Outlook}
-                    \begin{itemize}
-                        \item Fix Riptide's hardware
-                        \item Field experiments on Riptide
+                \begin{block}<6>{Set expression}
+                    $$Z = (A \cap B) \cup (\closure{A} \cap C)$$
+                \end{block}
+            \end{minipage}%
+            \hfill
+            \begin{minipage}[c]{.4\textwidth}
+                \begin{figure}
+                    \begin{overprint}
+                        \onslide<1>\centerline{\input{imgs/problem_a.pgf}}
+                        \onslide<2>\centerline{\input{imgs/problem_b.pgf}}
+                        \onslide<3>\centerline{\input{imgs/problem_c.pgf}}
+                        \onslide<4>\centerline{\input{imgs/problem_e1.pgf}}
+                        \onslide<5>\centerline{\input{imgs/problem_e2.pgf}}
+                        \onslide<6>\centerline{\input{imgs/problem_e.pgf}}
+                    \end{overprint}
+                    \caption{
+                        \only<1>{$A$}\only<2>{$B$}\only<3>{$C$}\only<4>{$A \cap B$}\only<5>{$\closure{A} \cap C$}\only<6>{$Z = (A \cap B) \cup (\closure{A} \cap C)$}
+                    }
+                \end{figure}
+            \end{minipage}
+        \end{frame}
+
+        \begin{frame}[fragile]{Karnaugh map}
+            \begin{center}
+                \begin{minipage}[b]{.6\textwidth}
+                    \begin{figure}
+                        \centering
+                        \begin{tikzpicture}[
+                                karnaugh cell size=.85cm,
+                                karnaugh, American style,
+                                kmlabel top/.style={font=\small,above},
+                                kmlabel left/.style={font=\small,left},
+                                kmsep line length=0.75\kmunitlength,
+                                thick, grp/.style n args={3}{
+                                    #1,fill=#1,fill opacity=0.4,rectangle,draw,
+                                    minimum width=#2\kmunitlength,
+                                    minimum height=#3\kmunitlength,
+                                    rounded corners=.05\kmunitlength,
+                                },
+                            ]
+                            \karnaughmaptab{3}{$f(a,b,c)$}{{$a$}{$b$}{$c$}}{0110 0011}{
+                                \draw<-2>[grp={RoyalBlue}{1.9}{.9}] (3.95\kmunitlength,.05) -- (3.95\kmunitlength,.95\kmunitlength) -- (2.95\kmunitlength,.95\kmunitlength) {[rounded corners=false] -- (2.95\kmunitlength,2\kmunitlength) -- (2.05\kmunitlength,2\kmunitlength)} -- (2.05\kmunitlength,1.95\kmunitlength) -- (1.05\kmunitlength,1.95\kmunitlength) -- (1.05\kmunitlength,1.05\kmunitlength) -- (2.05\kmunitlength,1.05\kmunitlength) {[rounded corners=false] -- (2.05\kmunitlength,0) -- (2.95\kmunitlength,0)} -- (2.95\kmunitlength,.05) -- cycle;
+                                \draw<2->[Dandelion,thick] (2\kmunitlength,0) -- (2\kmunitlength,\kmunitlength) -- (\kmunitlength,\kmunitlength) -- (\kmunitlength,2\kmunitlength) -- (2\kmunitlength,2\kmunitlength);
+                                \draw<2->[Dandelion,thick] (3\kmunitlength,0) -- (4\kmunitlength,0) -- (4\kmunitlength,\kmunitlength) -- (3\kmunitlength,\kmunitlength) -- (3\kmunitlength,2\kmunitlength);
+                                \node<3->[alt=<4>{grp={gray}{1.9}{.9}}{grp={RoyalBlue}{1.9}{.9}}] (innerB) at (3\kmunitlength,0.5\kmunitlength) {};
+                                \node<4->[grp={RoyalBlue}{1.9}{.9}] (innerC) at (2\kmunitlength,1.5\kmunitlength) {};
+                                \draw<5>[RubineRed,thick] (2\kmunitlength,0) -- (3\kmunitlength,0);
+                                \draw<5>[RubineRed,thick] (2\kmunitlength,\kmunitlength) -- (3\kmunitlength,\kmunitlength);
+                                \draw<5>[RubineRed,thick] (2\kmunitlength,2\kmunitlength) -- (3\kmunitlength,2\kmunitlength);
+                                \draw<7->[grp={RubineRed}{.9}{1.9}] [rounded corners=false] (2.05\kmunitlength,0) -- (2.05\kmunitlength,2) -- (2.95\kmunitlength,2) -- (2.95\kmunitlength,0) -- cycle;
+                            }
+                        \end{tikzpicture}
+                        \caption{Karnaugh map - $Z$}
+                    \end{figure}
+                \end{minipage}%
+                \hfill
+                \begin{minipage}[b]{.4\textwidth}
+                    \begin{figure}
+                        \begin{overprint}
+                            \only<1-2>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_paving.pgf}}
+                            }
+                            \only<3>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_e1.pgf}}
+                            }
+                            \only<4>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_e2.pgf}}
+                            }
+                            \only<5-6>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_e.pgf}}
+                            }
+                            \only<7>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_e3.pgf}}
+                            }
+                            \only<8>{
+                                \resizebox{.7\textwidth}{!}{\input{imgs/problem_paving.pgf}}
+                            }
+                        \end{overprint}
+                        \vspace{-1cm}
+                        \caption{
+                            \only<1-2,8>{$Z$}\only<3>{$A \cap B$}\only<4>{$\closure{A} \cap C$}\only<5-6>{$(A \cap B) \cup (\closure{A} \cap C)$}\only<7>{$B \cap C$}
+                        }
+                    \end{figure}
+                \end{minipage}
+                \begin{minipage}[t]{.65\textwidth}
+                    \vspace{-8mm}
+                    \begin{block}<3->{Disjunctive Normal Form}
+                        \vspace{2.5mm}
+                        \centering
+                        $f(a, b, c) = \onslide<3->{(a \land b)} \onslide<4->{\lor (\lnot a \land c)}$
+                    \end{block}
+                    \begin{block}<6->{Boundary Preserving Form}
+                        \vspace{2.5mm}
+                        \centering
+                        $f(a, b, c) = (a \land b) \lor (\lnot a \land c) \onslide<7->{\lor (b \land c)}$
+                    \end{block}
+                \end{minipage}
+            \end{center}
+        \end{frame}
+
+        \begin{frame}[fragile]{Adjacent Sets}
+            \begin{minipage}[c]{.6\textwidth}
+                \begin{figure}
+                    \centering
+                    \begin{tikzpicture}[
+                            karnaugh cell size=.85cm,
+                            karnaugh, American style,
+                            kmlabel top/.style={font=\small,above},
+                            kmlabel left/.style={font=\small,left},
+                            kmsep line length=0.75\kmunitlength,
+                            thick, grp/.style n args={3}{
+                                #1,fill=#1,fill opacity=0.4,rectangle,draw,
+                                minimum width=#2\kmunitlength,
+                                minimum height=#3\kmunitlength,
+                                rounded corners=.05\kmunitlength,
+                            },
+                        ]
+                        \karnaughmaptab{2}{$f(a,b)$}{{$a$}{$b$}}{11 10}{
+                            \draw<1>[grp={RoyalBlue}{1.9}{.9}] (.95\kmunitlength,.05) -- (.95\kmunitlength,1.05\kmunitlength) -- (1.95\kmunitlength,1.05\kmunitlength) -- (1.95\kmunitlength,1.95\kmunitlength) -- (.05\kmunitlength,1.95\kmunitlength) -- (.05\kmunitlength,.05\kmunitlength) -- cycle;
+                            \node<2->[alt=<3>{grp={gray}{.9}{1.9}}{grp={RoyalBlue}{.9}{1.9}}] (innerA) at (.5\kmunitlength,\kmunitlength) {};
+                            \node<3->[grp={RoyalBlue}{1.9}{.9}] (innerB) at (\kmunitlength,1.5\kmunitlength) {};
+                        }
+                    \end{tikzpicture}
+                    \caption{Karnaugh map - $A \cup B$}
+                \end{figure}
+            \end{minipage}%
+            \hfill
+            \begin{minipage}[c]{.4\textwidth}
+                \begin{figure}
+                    \begin{overprint}
+                        \only<1>{
+                            \resizebox{.9\textwidth}{!}{\input{imgs/circle_expected.pgf}}
+                        }
+                        \only<2>{
+                            \resizebox{.9\textwidth}{!}{\input{imgs/circle_1.pgf}}
+                        }
+                        \only<3>{
+                            \resizebox{.9\textwidth}{!}{\input{imgs/circle_2.pgf}}
+                        }
+                        \only<4>{
+                            \resizebox{.9\textwidth}{!}{\input{imgs/circle_discontinuity.pgf}}
+                        }
+                    \end{overprint}
+                    \vspace{-1cm}
+                    \caption{\only<1>{Expected $A \cup B$}\only<2>{$A$}\only<3>{$B$}\only<4>{$A \cup B$}}
+                \end{figure}
+            \end{minipage}
+        \end{frame}
+
+        \begin{frame}[fragile]{Boundary approach}
+            \begin{minipage}[t]{.5\textwidth}
+                \begin{figure}
+                    \centering
+                    \begin{tikzpicture}[
+                            karnaugh cell size=.85cm,
+                            karnaugh, American style,
+                            kmlabel top/.style={font=\small,above},
+                            kmlabel left/.style={font=\small,left},
+                            kmsep line length=0.75\kmunitlength,
+                            thick, grp/.style n args={3}{
+                                #1,fill=#1,fill opacity=0.4,rectangle,draw,
+                                minimum width=#2\kmunitlength,
+                                minimum height=#3\kmunitlength,
+                                rounded corners=.05\kmunitlength,
+                            },
+                        ]
+                        \karnaughmaptab{3}{$f(a,b,c)$}{{$a$}{$b$}{$c$}}{0110 0011}{
+                            \draw[grp={RoyalBlue}{1.9}{.9}] (3.95\kmunitlength,.05) -- (3.95\kmunitlength,.95\kmunitlength) -- (2.95\kmunitlength,.95\kmunitlength) {[rounded corners=false] -- (2.95\kmunitlength,2\kmunitlength) -- (2.05\kmunitlength,2\kmunitlength)} -- (2.05\kmunitlength,1.95\kmunitlength) -- (1.05\kmunitlength,1.95\kmunitlength) -- (1.05\kmunitlength,1.05\kmunitlength) -- (2.05\kmunitlength,1.05\kmunitlength) {[rounded corners=false] -- (2.05\kmunitlength,0) -- (2.95\kmunitlength,0)} -- (2.95\kmunitlength,.05) -- cycle;
+                            % dBnA
+                            \draw<2->[alt=<2>{RubineRed}{Dandelion},,thick] (2\kmunitlength,0) -- (2\kmunitlength,\kmunitlength);
+                            \draw<2->[alt=<2>{RubineRed}{Dandelion},thick] (4\kmunitlength,0) -- (4\kmunitlength,\kmunitlength);
+                            % dCnA
+                            \draw<3->[alt=<3>{RubineRed}{Dandelion},thick] (\kmunitlength,\kmunitlength) -- (\kmunitlength,2\kmunitlength);
+                            \draw<3->[alt=<3>{RubineRed}{Dandelion},thick] (3\kmunitlength,\kmunitlength) -- (3\kmunitlength,2\kmunitlength);
+                            % dAnBn~C
+                            \draw<4->[alt=<4>{RubineRed}{Dandelion},thick] (3\kmunitlength,0) -- (4\kmunitlength,0);
+                            \draw<4->[alt=<4>{RubineRed}{Dandelion},thick] (3\kmunitlength,\kmunitlength) -- (4\kmunitlength,\kmunitlength);
+                            % dAn~BnC
+                            \draw<5->[alt=<5>{RubineRed}{Dandelion},thick] (\kmunitlength,\kmunitlength) -- (2\kmunitlength,\kmunitlength);
+                            \draw<5->[alt=<5>{RubineRed}{Dandelion},thick] (\kmunitlength,2\kmunitlength) -- (2\kmunitlength,2\kmunitlength);
+                        }
+                    \end{tikzpicture}
+                    \caption{Karnaugh map of the expression}
+                \end{figure}
+                \vspace{2cm}
+            \end{minipage}%
+            \hfill
+            \begin{minipage}[t]{.5\textwidth}
+                \begin{figure}
+                    \centering
+                    \begin{overprint}
+                        \only<2>{\input{imgs/problem_dBA.pgf}}
+                        \only<3>{\input{imgs/problem_dC_A.pgf}}
+                        \only<4>{\input{imgs/problem_dAB_C.pgf}}
+                        \only<5>{\input{imgs/problem_dA_BC.pgf}}
+                        \only<6>{\input{imgs/problem_dZ.pgf}}
+                        \only<7>{\input{imgs/problem_paving.pgf}}
+                    \end{overprint}
+                    \vspace{-1.2cm}
+                    \only<2->{
+                        \caption{\only<2>{$\partial B \cap A$}\only<3>{$\partial C \cap \closure{A}$}\only<4>{$\partial A \cap B \cap \closure{C}$}\only<5>{$\partial A \cap \closure{B} \cap C$}\only<6>{$\partial Z$}\only<7>{$Z$}}
+                    }
+                \end{figure}
+            \end{minipage}
+        \end{frame}
+
+        \begin{frame}{Outlook}
+            \begin{minipage}[c]{.48\textwidth}
+                \begin{block}<+->{Problem statement}
+                    \vspace{2.5mm}
+                    \begin{itemize}[<+->]
+                        \item Union contractors problem
+                        \item Adjacent contractors
+                        \item Fake boundary
+                    \end{itemize}
+                \end{block}
+            \end{minipage}%
+            \hfill
+            \begin{minipage}[c]{.48\textwidth}
+                \begin{block}<+->{Geometric contractors}
+                    \vspace{2.5mm}
+                    \begin{itemize}[<+->]
+                        \item Define $\mathcal{C}_{A \cup B}$
+                        \item Add constraint $A \cup \closure{A} = \mathbb{R}^2$
+                    \end{itemize}
+                \end{block}
+                \begin{block}<+->{General union}
+                    \begin{itemize}[<+->]
+                        \item Boundary Preserving Form
+                        \item Boundary approach + Predicate
                     \end{itemize}
                 \end{block}
             \end{minipage}
         \end{frame}
 
-        
-
-    \appendix
+        \appendix
 
         \begin{frame}[standout]
             Questions?
         \end{frame}
 
-        \begin{frame}[allowframebreaks]{References}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            \settoggle{bbx:url}{false}
-            \settoggle{bbx:doi}{false}
-            \settoggle{bbx:eprint}{false}
-            \settoggle{bbx:isbn}{false}
-            \printbibliography[sorting=nyt]
+    % \begin{frame}{Set operators}
+    %     \centering
+    %     \begin{figure}
+    %         % Definition of circles
+    %         \def\firstcircle{(-0.75,0) circle (1)}
+    %         \def\secondcircle{(0.75,0) circle (1)}
 
-        \end{frame}
+    %         \colorlet{circle edge}{TolDarkBlue}
+    %         \colorlet{circle area}{TolLightBlue}
 
-        \begin{frame}{Lie algebra vs Lie group}
-            \begin{figure}
-                \begin{tikzpicture}
-                    % Lie algebra
-                    \begin{scope}[xshift=-3cm]
-                        \draw[black,inner color=gray!10, outer color=gray!40] (-1.5,1.5) rectangle (1.5,-1.5);
-                        \coordinate (I) at (-1.1,-1.1);
-                        \coordinate (R1) at (0.6,1.1);
-                        \node[RoyalPurple] at (R1) {$\bullet$} node[RoyalPurple] at (R1) [yshift=-0.5cm,xshift=-0.6cm] {\footnotesize$\mathbf{w}\wedge\left(\begin{smallmatrix}0&-w_z&w_y\\w_z&0&-w_x\\-w_y&w_x&0\end{smallmatrix}\right)$};
-                        \node[RoyalBlue] at (I) {$\bullet$} node[RoyalBlue] at (I) [above,xshift=0.5cm] {\footnotesize$\mathbf{a}\wedge\left(\begin{smallmatrix}0&0&0\\0&0&0\\0&0&0\end{smallmatrix}\right)$};
-                        \coordinate (LAr) at (1.5,0);
-                        \coordinate (LAb) at (-0.75,-1.5);
-                    \end{scope}
+    %         \tikzset{filled/.style={fill=circle area, draw=circle edge, thick},
+    %             outline/.style={draw=circle edge, thick}}
 
-                    % Lie group
-                    \begin{scope}[scale=0.9,xshift=3cm]
-                        \shade[ball color = gray!40, opacity = 0.4] (0,0) circle (2cm);
-                        \draw[thick] (-2,0) arc (180:360:2 and 0.6) coordinate[pos=0.3] (I);
-                        \draw[dashed] (2,0) arc (0:180:2 and 0.6);
-                        \draw[thick] (0,0) circle (2cm);
-                        \coordinate (R1) at (-0.6,1.1);
-                        \node[RoyalPurple] at (R1) {$\bullet$} node[RoyalPurple] at (R1) [yshift=-0.5cm,xshift=0.6cm] {\footnotesize$\mathbf{R}=exp\left(\begin{smallmatrix}0&-w_z&w_y\\w_z&0&-w_x\\-w_y&w_x&0\end{smallmatrix}\right)$};
-                        \node[RoyalBlue] at (I) {$\bullet$} node[RoyalBlue] at (I) [below,xshift=0.5cm] {\footnotesize$\mathbf{I}=exp\left(\begin{smallmatrix}0&0&0\\0&0&0\\0&0&0\end{smallmatrix}\right)$};
-                        \coordinate (LGl) at (-2,0);
-                        \coordinate (LGb) at (0.75,-2);
-                    \end{scope}
+    %         \centering 
 
-                    \begin{scope}[scale=0.18,xshift=-6cm,yshift=-20cm]
-                        % The axes
-                        \draw[->,>=latex] (xyz cs:x=-2) -- (xyz cs:x=10) node[above] {$x$};
-                        \draw[->,>=latex] (xyz cs:y=-2) -- (xyz cs:y=10) node[right] {$z$};
-                        \draw[->,>=latex] (xyz cs:z=-10) -- (xyz cs:z=10) node[above] {$y$};
+    %         \onslide<+->\begin{subfigure}[b]{0.5\textwidth}
+    %             \centering
+    %             \begin{tikzpicture}
+    %                 \draw[filled] \firstcircle node {$A$}
+    %                             \secondcircle node {$B$};
+    %                 \node[anchor=south] at (current bounding box.north) {$A \cup B$};
+    %             \end{tikzpicture}
+    %             \subcaption{Set union}
+    %         \end{subfigure}%
+    %         \hfill
+    %         \onslide<+->\begin{subfigure}[b]{0.5\textwidth}
+    %             \centering
+    %             \begin{tikzpicture}
+    %                 \begin{scope}
+    %                     \clip \firstcircle;
+    %                     \fill[filled] \secondcircle;
+    %                 \end{scope}
+    %                 \draw[outline] \firstcircle node {$A$};
+    %                 \draw[outline] \secondcircle node {$B$};
+    %                 \node[anchor=south] at (current bounding box.north) {$A \cap B$};
+    %             \end{tikzpicture}
+    %             \subcaption{Set intersection}
+    %         \end{subfigure}%
 
-                        % Thin ticks
-                        \foreach \coo in {-2,0,...,8} {
-                            \draw (\coo,-4pt) -- (\coo,4pt);
-                            \draw (-4pt,\coo) -- (4pt,\coo);
-                        }
-                        \foreach \coo in {-10,-8,...,8} {
-                            \draw (xyz cs:y=-0.15pt,z=\coo) -- (xyz cs:y=0.15pt,z=\coo);
-                        }
-                        
-                        % Dashed lines for the points P, Q
-                        \draw[dashed] (xyz cs:z=-5) -- +(0,7) coordinate (u) -- (xyz cs:y=7) -- +(5,0) -- 
-                            ++(xyz cs:x=5,z=-5) coordinate (v) --+(0,-7) coordinate (w) -- cycle;
-                        \draw[dashed] (u) -- (v);
-                        \draw[dashed] (5,7) -- (5,0) -- (w);
+    %         \onslide<+->\begin{subfigure}[b]{0.5\textwidth}
+    %             \centering
+    %             \begin{tikzpicture}
+    %                 \begin{scope}
+    %                     \clip \secondcircle;
+    %                     \draw[filled, even odd rule] \secondcircle node {$B$} \firstcircle;
+    %                 \end{scope}
+    %                 \draw[outline] \secondcircle \firstcircle node {$A$};
+    %                 \node[anchor=south] at (current bounding box.north) {$\bar{A}$};
+    %             \end{tikzpicture}
+    %             \subcaption{Set negation}
+    %         \end{subfigure}%
+    %         \hfill
+    %         \onslide<+->\begin{subfigure}[b]{0.5\textwidth}
+    %             \centering
+    %             \begin{tikzpicture}
+    %                 \begin{scope}
+    %                     \clip \firstcircle;
+    %                     \draw[filled, even odd rule] \firstcircle node {$A$} \secondcircle;
+    %                 \end{scope}
+    %                 \draw[outline] \firstcircle
+    %                             \secondcircle node {$B$};
+    %                 \node[anchor=south] at (current bounding box.north) {$A \mysetminus B$};
+    %             \end{tikzpicture}
+    %             \subcaption{Set deprivation}
+    %         \end{subfigure}
+    %     \end{figure}
+    % \end{frame}
 
-                        % Dots and labels for P, Q
-                        \coordinate (I) at (0,0);
-                        \node[RoyalBlue] at (I) {$\bullet$} node[RoyalBlue] at (I) [above,xshift=-0.6cm] {\footnotesize$\mathbf{a}\left(\begin{smallmatrix}0\\0\\0\end{smallmatrix}\right)$};
-                        \node[RoyalPurple] at (v) {$\bullet$} node[RoyalPurple] at (v) [right] {\footnotesize$\mathbf{w}\left(\begin{smallmatrix}w_x\\w_y\\w_z\end{smallmatrix}\right)$};
+    % \begin{frame}{Interval example}
 
-                        \coordinate (Rl) at (-6,2);
-                        \coordinate (Rr) at (12,2);
-                    \end{scope}
+    %     \centering
+    %     \begin{minipage}[t]{\textwidth}
+    %         \begin{figure}
+    %             \begin{tikzpicture}
+    %                 \draw[stealth-stealth, thick] (-5,0) node[below]{$-\infty$} -- (5,0) node[below]{$\infty$};
+    %                 \draw foreach \X in {-4,-3,...,4} {(\X,.1) -- (\X,-.1) node[below=0.2em]{$\X$}};
+    %                 \onslide<2-5>{\draw[very thick,RoyalBlue,alt=<4>{{Bracket[width=1.2em]}-{Bracket[width=1.2em,RubineRed]}}{{Bracket[width=1.2em]}-{Bracket[width=1.2em]}}] (-2,0) -- (1,0) node[midway,yshift=2.5mm]{$A$};}
+    %                 \onslide<3-5>{\draw[very thick,Dandelion,alt=<4>{{Bracket[width=1.2em,RubineRed]}-{Bracket[width=1.2em]}}{{Bracket[width=1.2em]}-{Bracket[width=1.2em]}}] (1,0) -- (3,0) node[midway,yshift=2.5mm]{$B$};}
+    %                 \onslide<5,10>{\draw[decorate,decoration=brace] (-2,0.5) -- (3,0.5) node[midway,above=0.1em]{$A \cup B$};}
+    %                 \onslide<6>{\draw[very thick,RoyalPurple,{Bracket[width=1.2em]}-{Bracket[width=1.2em]}] (-2,0) -- (3,0) node[midway,yshift=2.5mm]{$C$};}
 
-                    \draw[->,>=latex] ([xshift=.25cm,yshift=.25cm]LAr) to [bend left] node [midway,above] {$exp$} ([xshift=-.25cm,yshift=.25cm]LGl);
-                    \draw[->,>=latex] ([xshift=-.25cm,yshift=-.25cm]LGl) to [bend left] node [midway,below] {$log$} ([xshift=.25cm,yshift=-.25cm]LAr);
-                    
-                    \draw[->,>=latex] ([xshift=.25cm,yshift=-.25cm]LAb) to [bend right] node [midway,above right] {$\vee$} ([xshift=-.25cm,yshift=.25cm]Rl);
-                    \draw[->,>=latex] ([xshift=-.25cm,yshift=-.25cm]Rl) to [bend left] node [midway,below left] {$\wedge$} ([xshift=-.25cm,yshift=-.25cm]LAb);
-                    
-                    \draw[->,>=latex] ([xshift=.25cm,yshift=.25cm]Rr) to [bend right] node [midway,above left] {$Exp$} ([xshift=-.25cm,yshift=-.25cm]LGb);
-                    \draw[->,>=latex] ([xshift=.25cm,yshift=-.25cm]LGb) to [bend left] node [midway,below right] {$Log$} ([xshift=.25cm,yshift=-.25cm]Rr);
+    %                 % Boundary
+    %                 \onslide<7-10>{
+    %                     \filldraw[RoyalBlue] (-2,0) circle[radius=2.5pt];
+    %                     \node[RoyalBlue] at (-.5,.25) {$A$};
+    %                     \filldraw[RoyalBlue] (1,0) circle[radius=2.5pt];
+    %                 }
+    %                 \onslide<8-10>{
+    %                     \filldraw[Dandelion] (1,2.5pt) arc (90:-90:2.5pt) -- cycle;
+    %                     \node[Dandelion] at (2,.25) {$B$};
+    %                     \filldraw[Dandelion] (3,0) circle[radius=2.5pt];
+    %                 }
+    %                 \onslide<9>{
+    %                     \filldraw[RubineRed] (1,0) circle[radius=2.5pt];
+    %                 }
+    %                 \onslide<11>{
+    %                     \filldraw[RoyalPurple] (-2,0) circle[radius=2.5pt];
+    %                     \node[RoyalPurple] at (.5,.25) {$C$};
+    %                     \filldraw[RoyalPurple] (3,0) circle[radius=2.5pt];
+    %                 }
+    %             \end{tikzpicture}
+    %             \caption{Interval example representation}
+    %         \end{figure}
+    %     \end{minipage}
 
-                \end{tikzpicture}
-                \caption{Relationship between Lie algebra and Lie group}
-            \end{figure}
-        \end{frame}
+    %     \begin{minipage}[t]{0.48\textwidth}
+    %         \begin{exampleblock}<2->{Intervals}
+    %             \vspace{2.5mm}
+    %             \begin{itemize}
+    %                 \item<2-> $A = [-2, {\color<4>{RubineRed}1}]$
+    %                 \item<3-> $B = [{\color<4>{RubineRed}1}, 3]$
+    %             \end{itemize}
+    %         \end{exampleblock}
+    %         \begin{exampleblock}<5->{Union}
+    %             \begin{itemize}
+    %                 \item<5-> $C = A \cup B \onslide<6->{= [-2, 3]}$
+    %             \end{itemize}
+    %         \end{exampleblock}
+    %     \end{minipage}%
+    %     \hfill
+    %     \begin{minipage}[t]{0.48\textwidth}
+    %         \begin{exampleblock}<7->{Boundary}
+    %             \begin{itemize}
+    %                 \vspace{2.5mm}
+    %                 \item<7-> $\partial A = \{-2, {\color<9>{RubineRed}1}\}$
+    %                 \item<8-> $\partial B = \{{\color<9>{RubineRed}1}, 3\}$
+    %             \end{itemize}
+    %         \end{exampleblock}
+    %         \begin{exampleblock}<10->{Union Boundary}
+    %             \begin{itemize}
+    %                 \item<10-> $\partial C = \partial (A \cup B) \onslide<11>{= \{-2, 3\}}$
+    %             \end{itemize}
+    %         \end{exampleblock}
+    %     \end{minipage}%
+    % \end{frame}
 
-        \begin{frame}{Control}
-            \centering
-            \begin{minipage}{0.7\textwidth}
-                \begin{block}{Control inputs}
-                    \centering
-                    Controlled physical quantites are linear acceleration $\mathbf{a_r}$ and angular velocity $\mathbf{\omega_r}$
-                \end{block}
-                \begin{block}{State Equation}
-                    \begin{eqnarray}
-                        \left\{
-                            \begin{array}{rcl}
-                                \dot{\mathbf{p}} & = & \mathbf{R} \cdot \mathbf{v_r} \\
-                                \dot{\mathbf{R}} & = & \mathbf{R} \cdot (\mathbf{\omega_r} \wedge) \\
-                                \dot{\mathbf{v_r}} & = & \mathbf{R}^T \cdot g(\mathbf{p}) + \mathbf{a_r} - \mathbf{\omega_r} \wedge \mathbf{v_r}
-                            \end{array}
-                        \right.
-                    \end{eqnarray}
-                \end{block}
-            \end{minipage}
-        \end{frame}
+    % \begin{frame}{Property}
+    %     \centering
+    %     \begin{minipage}{.75\textwidth}
+    %         \begin{alertblock}{Boundary property}
+    %             \vspace{2.5mm}
+    %             \begin{itemize}
+    %                 \item Set union doesn't preserve the boundary,
+    %                 \item Set union transforms boundary points into interior points.
+    %             \end{itemize}
+    %         \end{alertblock}
 
+    %         \begin{alertblock}{Boundary of union}
+    %             \begin{equation*}
+    %                 \partial (A \cup B) \subseteq \partial A \cup \partial B
+    %             \end{equation*}
+    %         \end{alertblock}
+    %     \end{minipage}
+    % \end{frame}
 
-        \begin{frame}{Torpedo model}
-            \centering
-            \begin{minipage}{0.7\textwidth}
-                \begin{block}{Torpedo assumptions}
-                    The following statements are equivalent
-                    \begin{itemize}
-                        \item No side slip effect \\
-                        \item No lateral speed
-                        \item Velocity along the $\mathnormal{x}$ axis \\
-                    \end{itemize}
-                \end{block}
-                \begin{block}{Torpedo velocity}
-                    \begin{equation}
-                        \mathbf{v_r} = (v_r, 0, 0)^T
-                    \end{equation}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{State Equation}
-            \centering
-            \begin{minipage}{0.7\textwidth}
-                \begin{block}{AUV state}
-                    The state of the AUV is denoted by $\mathbf{X} = (\mathbf{p}, \mathbf{v_r}, \mathbf{R})$, where:
-                    \begin{itemize}
-                        \item $\mathbf{p}$ is the position of the AUV \\
-                        \item $\mathbf{v_r}$ is the velocity of the AUV in its frame \\
-                        \item $\mathbf{R}$ is the rotation matrix between the world and the AUV \\
-                    \end{itemize}
-                \end{block}
-                \begin{block}{State Equation}
-                    \begin{eqnarray}
-                        \left\{
-                            \begin{array}{rcl}
-                                \dot{\mathbf{p}} & = & \mathbf{R} \cdot \mathbf{v_r} \\
-                                \dot{\mathbf{R}} & = & \mathbf{R} \cdot (\mathbf{\omega_r} \wedge) \\
-                                \dot{\mathbf{v_r}} & = & \mathbf{R}^T \cdot g(\mathbf{p}) + \mathbf{a_r}
-                            \end{array}
-                        \right.
-                    \end{eqnarray}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Inputs}
-            \centering
-            \begin{minipage}{0.7\textwidth}
-                \begin{block}{Inputs}
-                    \centering
-                    Input vector of the system is $\mathbf{u} = (u_0, u_1, u_2, u_3)^T$, where:
-                    \begin{itemize}
-                        \item $u_0$: thruster velocity \\
-                        \item $u_1, u_2, u_3$: fin angles
-                    \end{itemize}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Linear acceleration}
-            \centering
-            \begin{minipage}{0.7\textwidth}
-                \begin{block}{Assumptions}
-                    \vspace{0.2cm}
-                    \begin{itemize}
-                        \item Quadratic thrust with velocity
-                        \item Quadratic drag with velocity
-                    \end{itemize}
-                \end{block}
-                \begin{block}{Linear acceleration}
-                    \begin{equation}
-                        \mathbf{a_r} = \underbrace{p_1 \cdot \left(\begin{smallmatrix}u_0 \\ 0 \\ 0 \end{smallmatrix}\right)^2}_{thrust} - \underbrace{p_2 \cdot \mathbf{v_r} \cdot |\mathbf{v_r}|}_{drag}
-                    \end{equation}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Angular velocity}
-            \centering
-            \begin{minipage}{0.8\textwidth}
-                \begin{block}{Assumptions}
-                    \vspace{0.2cm}
-                    \begin{itemize}
-                        \item Fin's drag negligible compared to the AUV drag
-                        \item Fin's lift used to control the AUV
-                        \item Direct response between the fin's angle and the angular velocity
-                    \end{itemize}
-                \end{block}
-                \begin{block}{Angular velocity}
-                    \begin{equation}
-                        \mathbf{\omega_r} = v_r^{\color{red}{2}} \cdot 
-                            \underbrace{
-                                \left(
-                                \begin{smallmatrix}
-                                    -p_3 & -p_3 & -p_3 \\
-                                    0 & p_4 \cdot sin(\frac{2\pi}{3}) & -p_4 \cdot sin(\frac{2\pi}{3}) \\
-                                    p_4 & p_4 \cdot cos(\frac{2\pi}{3}) & p_4 \cdot cos(\frac{2\pi}{3})
-                                \end{smallmatrix}
-                                \right)
-                            }_{\mathbf{B}(p_3, p_4)} \cdot \left(\begin{smallmatrix}u_1\\ u_2\\ u_3\end{smallmatrix}\right)
-                    \end{equation}
-                \end{block}
-            \end{minipage}
-        \end{frame}
-
-        \begin{frame}{Repartition matrix}
-            \centering
-            \begin{minipage}{0.8\textwidth}
-                \begin{block}{Fin's lift}
-                    $\forall i \in \{0, 1, 2\}:$
-                    \begin{itemize}
-                        \item Force $\mathbf{f_i} = \alpha \cdot u_i \cdot v^2 \cdot (0, 1, 0)^T$
-                        \item Orientation $\mathbf{R_i} = \mathbf{R_x}\left(\frac{2i\pi}{3}\right)$
-                        \item Center of pressure $\mathbf{q_i} = (\mathit{l_x}, 0, \mathit{l_z})^T$
-                        \item Torque $\mathbf{\tau_i} = \mathbf{R_i} \cdot \mathbf{q} \wedge \mathbf{f_i}$
-                    \end{itemize}
-                \end{block}
-                \begin{block}{Angular velocity}
-                    \begin{equation}
-                        \mathbf{\omega_r} = v_r^2 \cdot 
-                            \underbrace{
-                                \left(
-                                \begin{smallmatrix}
-                                    -p_3 & -p_3 & -p_3 \\
-                                    0 & p_4 \cdot sin(\frac{2\pi}{3}) & -p_4 \cdot sin(\frac{2\pi}{3}) \\
-                                    p_4 & p_4 \cdot cos(\frac{2\pi}{3}) & p_4 \cdot cos(\frac{2\pi}{3})
-                                \end{smallmatrix}
-                                \right)
-                            }_{\mathbf{B}(p_3, p_4)} \cdot \left(\begin{smallmatrix}u_1\\ u_2\\ u_3\end{smallmatrix}\right)
-                    \end{equation}
-                \end{block}
-            \end{minipage}
-        \end{frame}
     
 \end{document}
